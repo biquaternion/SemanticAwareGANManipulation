@@ -11,6 +11,7 @@ from argparse import ArgumentParser
 
 from mtcnn import mtcnn
 
+SUPPORTED_EXTS = ['.jpg', '.png']
 
 def align_faces(im1, im2, pts1, pts2):
     homo, _ = cv2.findHomography(pts1, pts2)
@@ -46,10 +47,13 @@ def diff_masks(im1, im2, pts1, pts2):
     warped_aff = cv2.warpAffine(im_aff, aff, dsize=(im1.shape[1], im1.shape[0]))
 
 
-def load_feature_points(filename):
-    with open(filename) as f:
-        data = json.load(f)
-        points = data['points']
+def list_from_path(src_path: Path):
+    if src_path.is_dir():
+        return [f for f in src_path.glob('*') if f.suffix in SUPPORTED_EXTS]
+    else:
+        if src_path.suffix in SUPPORTED_EXTS:
+            return [src_path]
+    return None
 
 
 if __name__ == '__main__':
@@ -66,23 +70,13 @@ if __name__ == '__main__':
     dst_path = Path(args.dst)
 
     if not body_path.exists() or not face_path.exists():
-        print(f'one of body path : {body_path} of face path : {face_path} does not exist')
+        print(f'one of body path : {body_path} or face path : {face_path} does not exist')
         exit(-1)
-    if body_path.suffix not in ['.png', '.jpg']:
-        print(f'src path suffix : {body_path.suffix} not supported')
 
     dst_path.mkdir(exist_ok=True, parents=True)
 
-    body_list = []
-    body_points = []
-    face_list = []
-    face_points = []
-    if body_path.is_dir():
-        body_list = [f for f in body_path.glob('*') if f.suffix == 'jpg' or f.suffix == 'png']
-        face_list = [f for f in face_path.glob('*') if f.suffix == 'jpg' or f.suffix == 'png']
-    else:
-        body_list.append(body_path)
-        face_list.append(face_path)
+    face_list = list_from_path(face_path)
+    body_list = list_from_path(body_path)
 
     results = []
     for face, body in product(face_list, body_list):
@@ -97,11 +91,11 @@ if __name__ == '__main__':
         body_detections = detector.detect_faces(bd_im)
         fc_pts = np.array([[x, y] for k, (x, y) in face_detections[0]['keypoints'].items()])
         bd_pts = np.array([[x, y] for k, (x, y) in body_detections[0]['keypoints'].items()])
-        results.append(align_faces(bd_im, fc_im, fc_pts, bd_pts))
-    for result in results:
+        results.append((face, body, align_faces(bd_im, fc_im, fc_pts, bd_pts)))
+    for face, body, result in results:
         for k, v in result.items():
             cv2.imshow(k, v)
-            cv2.waitKey(1000)
+            cv2.waitKey(100)
             output_name = (dst_path / f'{face.stem}_{body.stem}_{k}.png')
             cv2.imwrite(str(output_name), v)
     cv2.waitKey()
