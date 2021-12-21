@@ -1,3 +1,6 @@
 [submodule "src/background"]
 	path = src/background
 	url = git@github.com:vladimirzenin/MADE_graduation_project.git
+[submodule "3rdparty/Self-Correction-Human-Parsing"]
+	path = 3rdparty/Self-Correction-Human-Parsing
+	url = git@github.com:PeikeLi/Self-Correction-Human-Parsing.git
