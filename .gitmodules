@@ -4,3 +4,6 @@
 [submodule "3rdparty/Self-Correction-Human-Parsing"]
 	path = 3rdparty/Self-Correction-Human-Parsing
 	url = git@github.com:PeikeLi/Self-Correction-Human-Parsing.git
+[submodule "src/skin_color_correction"]
+	path = src/skin_color_correction
+	url = git@github.com:GreasyGoose/MADE_final_project.git
