@@ -1,0 +1,3 @@
+[submodule "src/background"]
+	path = src/background
+	url = git@github.com:vladimirzenin/MADE_graduation_project.git
