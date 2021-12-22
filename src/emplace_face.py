@@ -69,6 +69,8 @@ if __name__ == '__main__':
 
     argparser.add_argument('--face', required=True, default='face.png')
 
+    argparser.add_argument('--headless', required=False, default='')
+
     argparser.add_argument('--dst', required=False, default='output')
 
     argparser.add_argument('--output_fields', required=False, action='append')
@@ -76,6 +78,7 @@ if __name__ == '__main__':
     args = argparser.parse_args()
     body_path = Path(args.body)
     face_path = Path(args.face)
+    headless_path = Path(args.headless) if args.headless != '' else Path(args.face)
     dst_path = Path(args.dst)
     output_fields = args.output_fields
 
@@ -87,15 +90,17 @@ if __name__ == '__main__':
 
     face_list = list_from_path(face_path)
     body_list = list_from_path(body_path)
+    headless_list = list_from_path(headless_path)
 
     results = []
-    for face, body in product(face_list, body_list):
+    for face, body, headless in product(face_list, body_list, headless_list):
         fc_im = cv2.imread(str(face), -1)
         if fc_im.shape[-1] == 4:
             trans_mask = fc_im[:, :, 3] == 0
             fc_im[trans_mask] = [255, 255, 255, 255]
             fc_im = cv2.cvtColor(fc_im, cv2.COLOR_BGRA2BGR)
         bd_im = cv2.imread(str(body))
+        hl_im = cv2.imread(str(headless))
         detector = mtcnn.MTCNN()
         face_detections = detector.detect_faces(fc_im)
         body_detections = detector.detect_faces(bd_im)
