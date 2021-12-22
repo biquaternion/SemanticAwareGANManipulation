@@ -171,14 +171,18 @@ cd -
 #python back_rem.py -i "$SRC_BG_REMOVAL_DIR" -o "$DST_BG_REMOVAL_DIR" -q 512
 #cd -
 
-#echo "neck removal"
-#mkdir "$DATA_DIR"/neckless_src
-#mkdir "$DATA_DIR"/neckless_dst
-#cd 3rdparty/Self-Correction-Human-Parsing/
-#python simple_extractor.py --dataset lip --model-restore models/lip.pth --input-dir "$DATA_DIR"/neckless_src --output-dir "$DATA_DIR"/neckless_dst
-#cd -
+echo "neck removal"
+rm -rf "$DATA_DIR"/neckless_src
+rm -rf "$DATA_DIR"/neckless_dst
+mkdir -p "$DATA_DIR"/neckless_src
+mkdir -p "$DATA_DIR"/neckless_dst
+cp "$DST_FACE_POSE_DIR"/* "$DATA_DIR"/neckless_src
+cd 3rdparty/Self-Correction-Human-Parsing/
+python simple_extractor.py --dataset lip --model-restore models/lip.pth --input-dir "$DATA_DIR"/neckless_src --output-dir "$DATA_DIR"/neckless_dst
+cd -
 
 echo "emplace face"
 cd "$ROOT_DIR"
-OUTPUT_DIR="output/2"
-python src/emplace_face.py --face "$DST_FACE_POSE_DIR" --body "$DST_SKIN_CORRECTION_DIR" --headless "$DST_INPAINTING_DIR" --dst "$OUTPUT_DIR"
+OUTPUT_DIR="output/3"
+cp src/mask_labels.json mask_labels.json
+python src/emplace_face.py --face "$DST_FACE_POSE_DIR" --body "$DST_SKIN_CORRECTION_DIR" --headless "$DST_INPAINTING_DIR" --dst "$OUTPUT_DIR" --face_mask "$DATA_DIR"/neckless_dst
