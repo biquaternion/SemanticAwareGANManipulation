@@ -7,3 +7,6 @@
 [submodule "src/skin_color_correction"]
 	path = src/skin_color_correction
 	url = git@github.com:GreasyGoose/MADE_final_project.git
+[submodule "src/head_pose"]
+	path = src/head_pose
+	url = git@github.com:MaryiaP/final_project.git
