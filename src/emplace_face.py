@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import json
+import os
 from itertools import product
 from pathlib import Path
 
@@ -15,6 +16,7 @@ SUPPORTED_EXTS = ['.jpg', '.png']
 DELAY_MS = 100
 
 DEFAULT_LABELS = "mask_labels.json"
+
 
 def get_mask(mask_img, del_labels="LIP_DEL", verbose=False, verbose_name=""):
     """
@@ -39,21 +41,33 @@ def get_mask(mask_img, del_labels="LIP_DEL", verbose=False, verbose_name=""):
         print(f"Skin mask saved: {verbose_name}_skin_mask.png")
     return mask_img
 
+
+def blur_mask(src, mask):
+    blur = cv2.blur(src, (3, 3), 0)
+    # blur = cv2.medianBlur(src, 3, 0)
+    out = src.copy()
+    out[mask > 0] = blur[mask > 0]
+    return out
+
+
 def align_faces(body_im, face_im, body_pts, face_pts):
     homo, _ = cv2.findHomography(face_pts[[0, 1, 2, 3, 4]], body_pts[[0, 1, 2, 3, 4]])
     # thr, _ = cv2.threshold(np.max(im2, axis=2), 254, 255, cv2.THRESH_TOZERO_INV)
     # thr, im2[:, :, 0] = cv2.threshold(im2[:, :, 0], thr, 255, cv2.THRESH_TOZERO_INV)
     # thr, im2[:, :, 1] = cv2.threshold(im2[:, :, 1], thr, 255, cv2.THRESH_TOZERO_INV)
     # thr, im2[:, :, 2] = cv2.threshold(im2[:, :, 2], thr, 255, cv2.THRESH_TOZERO_INV)
-    thr, im_aff = cv2.threshold(face_im, 254, 255, cv2.THRESH_TOZERO_INV)
-    thr, im_pers = cv2.threshold(face_im, 254, 255, cv2.THRESH_TOZERO_INV)
+    # thr, im_aff = cv2.threshold(face_im, 254, 255, cv2.THRESH_TOZERO_INV)
+    # thr, im_pers = cv2.threshold(face_im, 254, 255, cv2.THRESH_TOZERO_INV)
+    thr, im_aff = cv2.threshold(face_im, 1, 255, cv2.THRESH_TOZERO)
+    thr, im_pers = cv2.threshold(face_im, 1, 255, cv2.THRESH_TOZERO)
     aff = cv2.getAffineTransform(face_pts[:3].astype(np.float32), body_pts[:3].astype(np.float32))
     warped_aff = cv2.warpAffine(im_aff, aff, dsize=(body_im.shape[1], body_im.shape[0]))
     warped_pers = cv2.warpPerspective(im_pers, homo, dsize=(body_im.shape[1], body_im.shape[0]))
     thr, mask_aff = cv2.threshold(warped_aff[:, :, 0],
-                                  0, 255,
+                                  1, 255,
                                   cv2.THRESH_BINARY_INV)
     mask_aff_diff = cv2.dilate(mask_aff, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (7, 7))) - mask_aff
+
     # warped_aff = cv2.GaussianBlur(warped_aff, (3, 3), 3)
     # warped_aff = cv2.GaussianBlur(warped_aff, (3, 3), 3)
     thr, mask_pers = cv2.threshold(warped_pers[:, :, 0],
@@ -62,6 +76,7 @@ def align_faces(body_im, face_im, body_pts, face_pts):
     canvas_aff = cv2.bitwise_or(warped_aff, body_im, mask=mask_aff)
     canvas_pers = cv2.bitwise_or(warped_pers, body_im, mask=mask_pers)
     result_aff = cv2.bitwise_or(canvas_aff, warped_aff)
+    result_aff = blur_mask(result_aff, mask_aff_diff)
     result_pers = cv2.bitwise_or(canvas_pers, warped_pers)
     result = {'warped_aff': warped_aff,
               'warped_pers': warped_pers,
@@ -104,7 +119,7 @@ if __name__ == '__main__':
     args = argparser.parse_args()
     body_path = Path(args.body)
     face_path = Path(args.face)
-    headless_path = Path(args.headless) if args.headless != '' else Path(args.face)
+    headless_path = Path(args.headless) if args.headless != '' else Path(args.body)
     dst_path = Path(args.dst)
     output_fields = args.output_fields
 
@@ -130,8 +145,8 @@ if __name__ == '__main__':
             fc_im = cv2.cvtColor(fc_im, cv2.COLOR_BGRA2BGR)
         mask_img = cv2.imread(str(face_mask), -1)
         mask_img = get_mask(mask_img)
-        mask_img = cv2.dilate(mask_img, (5,5))
-        fc_im[np.any(mask_img == [0, 0, 0], axis=-1)] = [255, 255, 255]
+        mask_img = cv2.dilate(mask_img, (5, 5))
+        fc_im[np.any(mask_img == [0, 0, 0], axis=-1)] = [0, 0, 0]
 
         bd_im = cv2.imread(str(body))
         hl_im = cv2.imread(str(headless))
